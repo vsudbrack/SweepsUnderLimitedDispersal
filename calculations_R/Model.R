@@ -2,7 +2,10 @@
 ########## Analytical model ##############
 ############################################
 
-### Creates the model ####
+
+### Creates the model based on Roze & Rousset, 2003: RR03 ####
+### Equations without 'of' from Sudbrack and Mullon, 2023 ####
+
 Roze = function (s, m, n=200, N=100, h=0.5, selection="soft", alpha=NULL, e=0, mu=0, extc_param=NULL){
   classes = c("s", "h", "m", "n", "N", "alpha", "e",
               "r.0.D", "r.1.D", "r.0.R", "r.1.R", 
@@ -22,24 +25,25 @@ Roze = function (s, m, n=200, N=100, h=0.5, selection="soft", alpha=NULL, e=0, m
   model$e = e
   model$mut.rate = mu
   
-  if (is.null(alpha) && e == 0 ){
+  if (is.null(alpha) && e == 0 ){ ## No extinction
     
     model$alpha = 1/N
-    model$r.0.D = (1-m)^2/(2*N - (1-m)^2*(2*N-1))
-    model$r.1.D = model$r.0.D
-    model$r.0.R = 0.5 + 0.5*model$r.0.D
-    model$r.1.R = 0.5/N + 0.5*model$r.0.D/N + (1-1/N)*model$r.1.D
+
+    model$r.0.D = (1-m)^2/(2*N - (1-m)^2*(2*N-1)) # Eq. A47
+    model$r.1.D = model$r.0.D # Eq. A46
+    model$r.0.R = 0.5 + 0.5*model$r.0.D # Eq. A23
+    model$r.1.R = 0.5/N + 0.5*model$r.0.D/N + (1-1/N)*model$r.1.D # Eq. A44
     
-    model$Neff = N*n/(1-model$r.1.D)
+    model$Neff = N*n/(1-model$r.1.D) #Eq. A42
     
-    quo = (2*N - (2*N-1)*(1-m)^2)*(2*N*N-(2*N-1)*(N-1)*(1-m)^3)
+    quo = (2*N - (2*N-1)*(1-m)^2)*(2*N*N-(2*N-1)*(N-1)*(1-m)^3) # Eq. B9 of RR03
     
-    model$a.D   = (1-m)^3*(N+(2*N-1)*(1-m)^2)/quo
-    model$b.D   = 3*m*(1-m)^2*N*(2*N + (1-m)*(2-m)*(2*N-1))/quo
-    model$c.D   = 2*m^2*N^2*(2*N*(3-2*m)+(3-m)*(1-m)^2*(2*N-1))/quo
+    model$a.D   = (1-m)^3*(N+(2*N-1)*(1-m)^2)/quo                     # Eq. A50, Eq. B6 of RR03
+    model$b.D   = 3*m*(1-m)^2*N*(2*N + (1-m)*(2-m)*(2*N-1))/quo       # Eq. B7 of RR03
+    model$c.D   = 2*m^2*N^2*(2*N*(3-2*m)+(3-m)*(1-m)^2*(2*N-1))/quo   # Eq. B8 of RR03
     
-    model$a.R = 1/model$N*model$r.0.D + (1-1/model$N)*model$a.D
-    model$c.R = model$c.D*(1-1/N)
+    model$a.R = 1/model$N*model$r.0.D + (1-1/model$N)*model$a.D # Eq. A48
+    model$c.R = model$c.D*(1-1/N) # Eq. 22 of RR03
     model$b.D = 1 - model$a.D -  model$c.D 
     model$b.R = 1 - model$a.R -  model$c.R
     
@@ -53,46 +57,44 @@ Roze = function (s, m, n=200, N=100, h=0.5, selection="soft", alpha=NULL, e=0, m
     model$psi2 = extc_param[4]
     
     model$alpha = 1/N
-    model$r.0.D = ((1-model$e)*(1-m)^2 + model$e*model$phi)/(2*N - ((1-model$e)*(1-m)^2 + model$e*model$phi)*(2*N-1)) #(2*model$k*(1-m)^2*(1-model$e) + 2*N*model$e + (2*model$k-1)*model$e*model$phi) / (2*model$k*(2*N - (2*N-1)*(1-model$e)*(1-m)^2) - (2*model$k-1)*(2*N-1)*model$e*model$phi)
-    model$r.1.D = model$r.0.D
-    model$r.0.R = 0.5 + 0.5*model$r.0.D
-    model$r.1.R = 0.5/N + 0.5*model$r.0.D/N + (1-1/N)*model$r.1.D
+
+    model$r.0.D = ((1-model$e)*(1-m)^2 + model$e*model$phi)/(2*N - ((1-model$e)*(1-m)^2 + model$e*model$phi)*(2*N-1)) # Eq. C6
+    model$r.1.D = model$r.0.D # Eq. C6
+    model$r.0.R = 0.5 + 0.5*model$r.0.D # Eq. A23
+    model$r.1.R = 0.5/N + 0.5*model$r.0.D/N + (1-1/N)*model$r.1.D #Eq. A44
     
-    model$Neff = (1-e)*n/( 2*model$r.1.R*(1-(1-e)^2*(1-m)^2) )
-    
-    #zeta = 4*model$k^2*(1-model$e)*(1-m)^3 + model$e*(2*model$k-1)*(2*model$k-2)*model$psi1
-    #xi = model$e* ( 4*N^2 + 6*N*(2*model$k-1)*model$psi1*(1+(2*N-1)*model$r.1.D) )
-    #model$a.D   = ((1 + 3*(2*N-1)*model$r.1.D)*zeta + xi) / (16*N^2*model$k^2  - zeta*(2*N-1)*(2*N-2) )
-    #delta   = 4*N^2*(m^3+3*m^2*(1-m))+3*m*(1-m)^2*2*N*(2*N-1)*(1-model$r.1.D)
-    #epsilon = 4*N^2*(1 - model$psi1 - model$psi2) + model$psi2*2*N*(2*N-1)*(1-model$r.1.D)
-    #denom = 16*N^2*model$k^2 - 4*model$k^2*(1-model$e)*(1-m)^3*(2*N-1)*(2*N-2) - model$e*(2*model$k-1)*(2*model$k-2)*model$psi1*(2*N-1)*(2*N-2)
-    #model$c.D   = (4*model$k^2*(1-model$e)*delta + model$e*(2*model$k-1)*(2*model$k-2)*epsilon) / denom
+    model$Neff = (1-e)*n/( 2*model$r.1.R*(1-(1-e)^2*(1-m)^2) ) #Eq. C3
     
     term1 = (1-model$m)^3*(1-model$e)+model$e*(model$phi)^2
-    model$a.D = (1+3*(2*model$N-1)*model$r.1.D)*term1/(4*model$N*(model$N-(1-0.5/model$N)*(model$N-1)*term1))
+    model$a.D = (1+3*(2*model$N-1)*model$r.1.D)*term1/(4*model$N*(model$N-(1-0.5/model$N)*(model$N-1)*term1)) #Eq. C8
     
-    model$a.R = 1/model$N*model$r.0.D + (1-1/model$N)*model$a.D
-    model$c.R =  1 - model$a.R - (model$r.0.D - model$a.R) - 2*(model$r.1.R - model$a.R)
+    model$a.R = 1/model$N*model$r.0.D + (1-1/model$N)*model$a.D # Eq. A48
+    model$c.R =  1 - model$a.R - (model$r.0.D - model$a.R) - 2*(model$r.1.R - model$a.R) # Eq. A24
   
-    model$c.D = model$c.R/(1-1/N)
+    model$c.D = model$c.R/(1-1/N) # Eq. 22 of RR03, inverted
     model$b.D   = 1 - model$a.D -  model$c.D 
   
   }
 
   
-  model$dWij.dzij = 2
+  model$dWij.dzij = 2 # Eq. A26
   model$selection = selection
   
-  if (selection == 'soft') model$dWij.dzik = -2/(N-1)
-  if (selection == 'hard') model$dWij.dzik = -2*(1-m)^2*(1-e)/(N-1)
+  if (selection == 'soft') model$dWij.dzik = -2/(N-1) # Eq. A26 with N-1 that cancels below
+  if (selection == 'hard') model$dWij.dzik = -2*(1-m)^2*(1-e)/(N-1) # Eq. E7, when e=0 gives eq. E2
   
-  model$advection0  = 0.5*s*(model$dWij.dzij*(2*h*model$r.0.R+(1-2*h)*model$r.0.D) + (N-1)*model$dWij.dzik*(2*h*model$r.1.R+(1-2*h)*model$a.R))
-  model$advection1  = 0.5*s*(1-2*h)*(model$dWij.dzij*(1-model$r.0.D)+(N-1)*model$dWij.dzik*(1-model$r.0.D-model$c.R))
-  model$diffusion   = 0.5/model$Neff
+  # Factoring out p(1-p):
+  model$advection0  = 0.5*s*(model$dWij.dzij*(2*h*model$r.0.R+(1-2*h)*model$r.0.D) + (N-1)*model$dWij.dzik*(2*h*model$r.1.R+(1-2*h)*model$a.R)) # Eq. A25, frequency independent
+  model$advection1  = 0.5*s*(1-2*h)*(model$dWij.dzij*(1-model$r.0.D)+(N-1)*model$dWij.dzik*(1-model$r.0.D-model$c.R)) # Eq. A25, frequency dependent linear
+  model$diffusion   = 0.5/model$Neff # Eq. A40
   
   return(model)
 }
 
+##################################
+########## Analyses ##############
+##################################
+# All of them take a model Roze() as input
 
 ### Calculates the Meantime to Segregation ####
 segregation.meantime = function (model, res=0.001, plot=FALSE){
@@ -156,6 +158,7 @@ fixation.meantime  = function (model, res=0.001, plot=FALSE){
   if(plot) plot(c(p,1), c(t.star,0), type='l', lwd=2, xlab="Initial frequency on population", ylab="Mean time to fixation")
 }
 
+## Calculates the mean time given a vector of p0 ###
 fixation.meantime.points  = function (model, p0){
   PSI = function(p) exp(-2*model$advection0/model$diffusion*p - model$advection1/model$diffusion*p^2)
   
@@ -181,6 +184,7 @@ fixation.meantime.points  = function (model, p0){
   
 }
 
+## Calculates the mean time to fixation given p0=1/(2N)/n ###
 fixation.meantime.singlemutant  = function (model){
   x0 = 0.5/model$n/model$N
   epsilon = 0.00001
@@ -206,6 +210,7 @@ fixation.meantime.singlemutant  = function (model){
   return(t.star)
 }
 
+## Calculates the mean time from p0=1/(2N)/n until a threshold ###
 meantime.singlemutant  = function (model, threshold = 1){
   x0 = 0.5/model$n/model$N
   
@@ -221,6 +226,7 @@ meantime.singlemutant  = function (model, threshold = 1){
   return(t.star)
 }
 
+### Time of a hard sweep ###
 adaptation.meantime.singlemutant  = function (model){
   u = fixation.probability(model, res=0.5/(model$N*model$n))[2,2]
   Tadapt = 0.5/(model$N*model$n*model$mut.rate*u*(1-model$e))
@@ -229,11 +235,13 @@ adaptation.meantime.singlemutant  = function (model){
   return(Tadapt)
 }
 
+### Time of a soft sweep ####
 adaptation.meantime.softsweep = function(s, h, m, n, N, mu, size = 1E3, selection = "soft", e = 0, extc_param=NULL){
   res0 = 0.5/n/N
   model = Roze(s=s[1], m=m, h=h[1], n=n, N=N, mu=mu, selection=selection, e = e, extc_param=extc_param)
   probdist = stationary.FPEq(model, res0)
   
+  ### MonteCarlo integration ###
   samples = sample(x = probdist[,1], prob = probdist[,2]*res0, size = size, replace=T)
 
   model = Roze(s=s[2], m=m, h=h[2], n=n, N=N, mu=0, selection=selection, e = e, extc_param=extc_param)
@@ -242,7 +250,8 @@ adaptation.meantime.softsweep = function(s, h, m, n, N, mu, size = 1E3, selectio
   mean(time[,2])
 }
 
-adaptation.fixation.softsweep = function(s, h, m, n, N, mu, selection="soft"){
+### Calculates the probability of a soft sweeps ####
+adaptation.probability.softsweep = function(s, h, m, n, N, mu, selection="soft"){
   res0 = 0.5/n/N
   model = Roze(s=s[1], m=m, h=h[1], n=n, N=N, mu=mu, selection="soft")
   probdist = stationary.FPEq(model, res0)
@@ -253,7 +262,7 @@ adaptation.fixation.softsweep = function(s, h, m, n, N, mu, selection="soft"){
   return( res0*sum(probdist[,2] * probfix[seq(2, length(probfix[,2])-1),2] ) )
 }
 
-### Solves the probability distribution in time numerically
+### Solves the probability distribution in time numerically ####
 solve.FPEq = function(model, ini.cond, tf, res=0.001, plot=FALSE){
   x = seq(0,1,by=res)
   u = rep(0,length(x))
@@ -305,7 +314,7 @@ solve.FPEq = function(model, ini.cond, tf, res=0.001, plot=FALSE){
   return(data) 
 }
 
-### Solves the probability distribution in time numerically
+### Solves the stationary probability distribution numerically ####
 stationary.FPEq = function(model, res=0.001, plot=FALSE){
   epsilon = 1E-5
   x = seq(res,1-res,by=res)
@@ -344,6 +353,7 @@ fixation.meantime.Charlesworth2020 = function(model){
   return(Ts1 + Td + Ts2)
 }
 
+### Calculates the tme of a hard sweep using Charlesworth 2020 approximation ####
 adaptation.meantime.Charlesworth2020 = function(model){
   u = fixation.probability(model, res=0.5/(model$N*model$n))[2,2]
   Tadapt = 0.5/(model$N*model$n*model$mut.rate*u*(1-model$e))
@@ -351,7 +361,7 @@ adaptation.meantime.Charlesworth2020 = function(model){
   return(Tadapt)
 }
 
-### Calculates the mean time to fixation using the approximation of van Herwaarden and van der Wal (2002)
+### Calculates the mean time to fixation using the approximation of van Herwaarden and van der Wal (2002) ####
 fixation.meantime.Herwaarden2002 = function(model){
   q1 = 1 / (4 * model$advection0 * model$Neff)
   p2 = 1 / (4 * (model$advection0+model$advection1) * model$Neff)
