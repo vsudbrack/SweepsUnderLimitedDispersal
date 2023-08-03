@@ -37,7 +37,7 @@ Vitor Sudbrack and Charles Mullon. "Tempo of hard and soft sweeps in subdivided 
 
 ## Authors:
 
-- Vitor Sudbrack* (vitor.sudbrack@unil.ch)
-- Charles Mullon* (charles.mullon@unil.ch)
+- Vitor Sudbrack¹ (vitor.sudbrack@unil.ch)
+- Charles Mullon¹ (charles.mullon@unil.ch)
 
-* Department of Ecology and Evolution, University of Lausanne
+¹ Department of Ecology and Evolution, University of Lausanne
