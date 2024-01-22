@@ -22,16 +22,15 @@ The rate at which populations adapt depends on the probability and time of fixat
 
 ## Citation:
 
-Vitor Sudbrack and Charles Mullon. "Tempo of hard and soft sweeps in subdivided populations." bioRxiv (2023): 2023-07.
+Vitor Sudbrack and Charles Mullon. "Fixation times of de novo and standing beneficial variants in subdivided populations
+." bioRxiv (2024).
 
 ```
-@article{sudbrack2023tempo,
-  title={Tempo of hard and soft sweeps in subdivided populations},
+@article{sudbrack2024fixation,
+  title={Fixation times of de novo and standing beneficial variants in subdivided populations},
   author={Sudbrack, Vitor and Mullon, Charles},
   journal={bioRxiv},
-  pages={2023--07},
-  year={2023},
-  publisher={Cold Spring Harbor Laboratory}
+  year={2024},
 }
 ```
 
