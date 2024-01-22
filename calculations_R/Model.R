@@ -2,7 +2,6 @@
 ########## Analytical model ##############
 ############################################
 
-
 ### Creates the model based on Roze & Rousset, 2003: RR03 ####
 ### Equations without 'of' from Sudbrack and Mullon, 2023 ####
 
@@ -87,6 +86,57 @@ Roze = function (s, m, n=200, N=100, h=0.5, selection="soft", alpha=NULL, e=0, m
   model$advection0  = 0.5*s*(model$dWij.dzij*(2*h*model$r.0.R+(1-2*h)*model$r.0.D) + (N-1)*model$dWij.dzik*(2*h*model$r.1.R+(1-2*h)*model$a.R)) # Eq. A25, frequency independent
   model$advection1  = 0.5*s*(1-2*h)*(model$dWij.dzij*(1-model$r.0.D)+(N-1)*model$dWij.dzik*(1-model$r.0.D-model$c.R)) # Eq. A25, frequency dependent linear
   model$diffusion   = 0.5/model$Neff # Eq. A40
+  
+  return(model)
+}
+
+Whitlock = function (s, m, n=200, N=100, h=0.5, selection="soft", alpha=NULL, e=0, mu=0, extc_param=NULL){
+  classes = c("s", "h", "m", "n", "N", "alpha", "e",
+              "r.0.D", "r.1.D", "r.0.R", "r.1.R", 
+              "a.D", "b.D", "c.D", "a.R", "c.R",
+              "selection", "dWij.dzij", "dWij.dzik",
+              "advection0", "advection1", "diffusion", "mut.rate", 
+              "k", "phi", "psi1", "psi2")
+  
+  model <- vector(mode="list", length=length(classes))
+  names(model) = classes
+  
+  model$s = s
+  model$h = h
+  model$m = m
+  model$n = n
+  model$N = N
+  model$e = e
+  model$mut.rate = mu
+  
+  if(model$e>0) {print("Error, Whitlock with extinction not define"); exit(1)}
+  
+  model$alpha = 1/N
+  model$r.0.D = 1/(1 + 4*N*m)
+  model$r.1.D = model$r.0.D
+  model$r.0.R = 0.5 + 0.5*model$r.0.D
+  model$r.1.R = 0.5/N + 0.5*model$r.0.D/N + (1-1/N)*model$r.1.D
+  
+  model$Neff = N*n/(1-model$r.1.D)
+  
+  model$a.R = 2 * model$r.1.R^2 / (1+model$r.1.R)
+  model$c.R = 1 - model$a.R - (model$r.0.D-model$a.R) - 2*(model$r.1.R-model$a.R)
+  model$b.R = 1 - model$a.R -  model$c.R
+  
+  model$a.D = (model$a.R - model$r.0.D/N)/(1.0-1.0/N)
+  model$c.D = model$c.R / (1.0 - 1.0/N)
+  model$b.D = 1 - model$a.D -  model$c.D 
+  
+  model$dWij.dzij = 2
+  model$selection = selection
+  
+  if (selection == 'soft') model$dWij.dzik = -2/(N-1)
+  if (selection == 'hard') model$dWij.dzik = -2*(1-m)^2*(1-e)/(N-1)
+  
+  FST = model$r.1.R
+  model$advection0  = s*(1-FST)/(1+FST)*(FST*(1-h)+h)
+  model$advection1  = s*(1-FST)^2/(1+FST)*(1-2*h)
+  model$diffusion   = 0.5/model$Neff
   
   return(model)
 }

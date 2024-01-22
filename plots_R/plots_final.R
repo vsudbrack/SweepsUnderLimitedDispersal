@@ -5,6 +5,78 @@
 ###### Both simulations and analytical comes from .csv files
 ###### See the folder simulations or analytical to codes to generate these files
 
+library("RColorBrewer")
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(latex2exp)
+library(patchwork)
+setwd("~/sync/LimitedDispersal/")
+source("RozeFrancois.R")
+
+# Define theme of ggplot2 ----
+
+my.theme = theme_classic() + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(angle = 0, vjust = 0.5, hjust=0.5),
+        legend.position="top",
+        text = element_text(size = 16))
+
+y.meantime = scale_y_continuous(trans = log10_trans(), 
+                                breaks = trans_breaks("log10", function(x) 10^x), 
+                                labels = trans_format("log10", math_format(10^.x)),
+                                #limits = c(10**3.7, 10**5),
+)
+
+x.dominance = scale_x_continuous(breaks =c(0, 0.25, 0.5, 0.75, 1),
+                                 labels = c("0\nRecessive", "0.25", 
+                                            "0.5\nAdditive","0.75", 
+                                            "1\nDominant")          )
+
+y.dispersal = scale_y_continuous(trans = log10_trans(), 
+                                 breaks = c(1, 0.1, 0.01, 0.001, 1E-4), 
+                                 labels = c(TeX("$1$"), 
+                                            TeX("$10^{-1}$"), 
+                                            TeX("$10^{-2}$"), 
+                                            TeX("$10^{-3}$"),
+                                            TeX("$10^{-4}$")))
+
+x.dispersal = scale_x_continuous(trans = log10_trans(), 
+                                 breaks = c(1, 0.1, 0.01, 0.001, 1E-4), 
+                                 labels = c(TeX("$1$"), 
+                                            TeX("$10^{-1}$"), 
+                                            TeX("$10^{-2}$"), 
+                                            TeX("$10^{-3}$"),
+                                            TeX("$10^{-4}$")))
+
+dominance.color = scale_color_viridis_d(end = 0.8)
+dominance.fill =  scale_fill_viridis_d(end = 0.8)
+
+x.FST = scale_x_continuous(trans = identity_trans(),
+                           limits = c(0, 1),
+                           breaks = 0.01*c(0, 2.5, 20, 25, 50, 70, 75, 96, 100), 
+                           labels = c("Well mixed", "\nd = 0.1", 
+                                      "\nd = 0.01", "25", "50",
+                                      "\nd = 0.001", "75", "\nd = 0.0001", 
+                                      "100"))
+
+
+h.labs <- c("Recessive", "Additive", "Dominant")
+names(h.labs) <- c("0", "0.5", "1")
+
+phi.labs <- c("All colonizers from\ndifferent demes", "All colonizers from\nthe same deme")
+names(phi.labs) <- c("0", "1")
+
+case.labs <- c("Soft sweep\nwithout dominance shift", "Soft sweep\nwith dominance shift")
+names(case.labs) <- c("noshift", "shift")
+
+mu.labs <- c(TeX("10^{-8}"), TeX("10^{-6}"), TeX("10^{-4}"))
+names(mu.labs) <- c("1e-8", "1e-06", "1e-04")
+
+sel.labs <- c("Soft selection", "Hard selection")
+names(sel.labs) <- c("soft", "hard")
+
+
 ratio_log = function(a, b){
   # Relates a ratio to a value in logscale
   10 ^ ( (a / (a + b) ) * log10( a + b) )
@@ -568,3 +640,38 @@ data.raw %>%
   stat_summary(fun=mean, geom="point", shape=20, size=3, color="white") + my.theme +
   #theme(legend.position="none") +
   dominance.color + dominance.fill + y.meantime
+
+
+###########################################
+##### Comparing ours to Whitlock ##########
+###########################################
+
+aux_Roze = function(sa, ha, ma){
+  a = Roze(s=sa, h=ha, m=ma)
+  tau = tryCatch({fixation.meantime.singlemutant(a)}, error=function(e) {return(NA)})
+  return(tau)
+}
+
+aux_Whitlock = function(sa, ha, ma){
+  a = Whitlock(s=sa, h=ha, m=ma)
+  tau = tryCatch({fixation.meantime.singlemutant(a)}, error=function(e) {return(NA)})
+  return(tau)
+}
+
+
+
+data_th = expand.grid( h= c(0, 0.5, 1.0), m = 2^seq(-10, -1) )
+data_th$meantimeR = mapply(aux_Roze,  sa = 0.01, 
+                           ha = data_th$h, ma = data_th$m)
+data_th$meantimeW = mapply(aux_Whitlock,  sa = 0.01, 
+                           ha = data_th$h, ma = data_th$m)
+
+data_th %>% 
+  ggplot(aes(x = m, y = meantimeR, color=factor(h))) + 
+  geom_line(alpha=0.7, size=1.2) + 
+  geom_line(aes(y = meantimeW), alpha=0.7, size=1.0, lty = "dashed" ) +
+  xlab(TeX("Dispersal rate, d")) + 
+  ylab(TeX("Mean time of hard sweeps, $\\tau_{HS}$")) +
+  labs(col="Genetic dominance, h:") + 
+  my.theme + y.meantime + x.dispersal + dominance.color
+
